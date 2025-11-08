@@ -4,6 +4,8 @@ import importlib.metadata
 from rich.console import Console
 from rich.panel import Panel
 from rich.align import Align
+from rich.text import Text
+from .theme import ObsidianColors, get_gradient_text
 
 # Get version from package metadata
 try:
@@ -14,17 +16,40 @@ except importlib.metadata.PackageNotFoundError:
 console = Console()
 
 TITLE = '''
-  ____  _         _     _ _             _ _       
- / __ \| |       (_)   | (_)           (_) |      
-| |  | | |__  ___ _  __| |_  __ _ _ __  _| |_ ___ 
-| |  | | '_ \/ __| |/ _` | |/ _` | '_ \| | __/ _ \\
-| |__| | |_) \__ \ | (_| | | (_| | | | | | ||  __/
- \____/|_.__/|___/_|\__,_|_|\__,_|_| |_|_|\__\___|
+  ██████╗ ██████╗ ███████╗██╗██████╗ ██╗ █████╗ ███╗   ██╗██╗████████╗███████╗
+ ██╔═══██╗██╔══██╗██╔════╝██║██╔══██╗██║██╔══██╗████╗  ██║██║╚══██╔══╝██╔════╝
+ ██║   ██║██████╔╝███████╗██║██║  ██║██║███████║██╔██╗ ██║██║   ██║   █████╗
+ ██║   ██║██╔══██╗╚════██║██║██║  ██║██║██╔══██║██║╚██╗██║██║   ██║   ██╔══╝
+ ╚██████╔╝██████╔╝███████║██║██████╔╝██║██║  ██║██║ ╚████║██║   ██║   ███████╗
+  ╚═════╝ ╚═════╝ ╚══════╝╚═╝╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝   ╚══════╝
 '''
+
+SUBTITLE = "  Sync your Obsidian vault with GitHub  "
+DECORATION = "─" * 80
 
 def print_banner(animated: bool = True) -> None:
     """Print the application banner with version."""
-    console.print(Align.center(TITLE, vertical="middle"), style="purple")
-    console.print(Align.right(f"v{__version__}"), style="purple")
+    # Create gradient effect for the title
+    title_text = Text()
+    lines = TITLE.strip().split('\n')
 
+    for i, line in enumerate(lines):
+        if i < 2:
+            color = ObsidianColors.PRIMARY_BRIGHT
+        elif i < 4:
+            color = ObsidianColors.PRIMARY_LIGHT
+        else:
+            color = ObsidianColors.PRIMARY
 
+        title_text.append(line + "\n", style=f"bold {color}")
+
+    console.print(Align.center(title_text))
+
+    # Print version and subtitle with Obsidian colors
+    version_text = Text(f"v{__version__}", style=f"bold {ObsidianColors.PRIMARY_LIGHT}")
+    subtitle_text = Text(SUBTITLE, style=f"{ObsidianColors.TEXT_SECONDARY}")
+
+    console.print(Align.center(subtitle_text))
+    console.print(Align.center(f"[{ObsidianColors.PRIMARY}]{DECORATION}[/]"))
+    console.print(Align.center(version_text))
+    console.print()  # Add spacing

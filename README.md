@@ -1,10 +1,12 @@
 # Obsidianite 🌑
 
-Obsidianite is a powerful command-line tool designed to seamlessly sync your Obsidian vault with a private GitHub repository. It provides a beautiful CLI interface with automatic Git operations and secure token management.
+Obsidianite is a powerful command-line tool designed to seamlessly sync your Obsidian vault with a private GitHub repository. It provides a beautiful CLI interface with Obsidian's signature purple and black theme, featuring automatic Git operations and secure token management.
 
 ## Features ✨
 
--   Beautiful CLI interface with Tokyo Night theme
+-   Beautiful CLI interface with Obsidian's signature purple theme
+-   Gradient purple banner with modern Unicode design
+-   Color-coded panels and tables for better readability
 -   Automatic Git repository management
 -   Private GitHub repository integration
 -   Secure token storage
@@ -54,11 +56,11 @@ Obsidianite takes security seriously:
 
 ## Configuration 🔧
 
-Configuration is stored in the Tokyo Night themed TOML file, providing:
+Configuration is managed through a simple and intuitive system:
 
--   Custom commit message templates
--   GitHub repository settings
--   Color scheme preferences
+-   Secure token storage in `~/.obsidianite/.env`
+-   Vault-to-repository mappings
+-   Obsidian-themed visual interface
 
 ## Contributing 🤝
 
