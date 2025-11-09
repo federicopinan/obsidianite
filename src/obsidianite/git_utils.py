@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import os
+import stat
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
 from git import Repo, GitCommandError, InvalidGitRepositoryError, NoSuchPathError
+from .security import validate_remote_url
 
 
 GITIGNORE_CONTENT = """
@@ -26,12 +29,36 @@ node_modules/
 
 
 def ensure_gitignore(path: Path) -> None:
+    """Create .gitignore file with secure permissions if it doesn't exist.
+
+    Args:
+        path: Path to the repository root
+    """
     gi = path / ".gitignore"
     if not gi.exists():
         gi.write_text(GITIGNORE_CONTENT + "\n", encoding="utf-8")
+        # Set appropriate permissions (0644 - owner rw, group/others r)
+        if os.name != 'nt':  # Skip on Windows
+            os.chmod(gi, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 0644
 
 
 def init_repo(vault_path: Path, remote_url: str) -> Repo:
+    """Initialize a Git repository with secure settings.
+
+    Args:
+        vault_path: Path to the repository
+        remote_url: Remote URL (will be validated)
+
+    Returns:
+        Initialized Repo object
+
+    Raises:
+        ValueError: If remote URL is invalid
+        RuntimeError: If repository initialization fails
+    """
+    # Validate remote URL before using it
+    remote_url = validate_remote_url(remote_url)
+
     ensure_gitignore(vault_path)
     try:
         if (vault_path / ".git").exists():
@@ -47,7 +74,7 @@ def init_repo(vault_path: Path, remote_url: str) -> Repo:
             repo.delete_remote("origin")
     except Exception:
         pass  # Ignore errors during remote cleanup
-    
+
     # Create new remote
     repo.create_remote("origin", remote_url)
 

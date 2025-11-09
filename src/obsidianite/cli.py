@@ -21,6 +21,14 @@ from .config import get_token, set_token, set_repo_mapping, get_repo_mapping
 from .github_api import get_or_create_private_repo, build_remote_url, get_latest_release
 from .git_utils import init_repo, open_repo, commit_all, push as git_push, pull as git_pull, get_changed_files, get_diff_summary
 from .theme import ObsidianColors
+from .security import (
+    validate_vault_path,
+    validate_repo_name,
+    validate_input_length,
+    sanitize_error_message,
+    MAX_COMMIT_MESSAGE_LENGTH,
+    MAX_REPO_NAME_LENGTH
+)
 
 
 console = Console()
@@ -46,26 +54,32 @@ def init(
     use_existing: bool = typer.Option(False, "--use-existing", help="Use existing repository only, don't create new"),
 ):
     """Initialize a vault and connect it to a private GitHub repository."""
-    if vault_path is None:
-        vault_path = Path(typer.prompt("Enter local path of your Obsidian Vault"))
-    vault_path = vault_path.expanduser().resolve()
-    vault_path.mkdir(parents=True, exist_ok=True)
-
-    token = get_token()
-    if not token:
-        token = typer.prompt("Enter your GitHub Personal Access Token", hide_input=True)
-        set_token(token)
-        console.print(f"[{ObsidianColors.SUCCESS}]✓[/] Token stored in ~/.obsidianite/.env")
-    else:
-        console.print(f"[{ObsidianColors.INFO}]ℹ[/] Using existing GitHub token")
-
-    if not repo_name:
-        default_repo = vault_path.name.replace(" ", "-")
-        repo_name = typer.prompt("Enter GitHub repository name", default=default_repo)
-
-    console.print(f"[{ObsidianColors.INFO}]{'Checking' if use_existing else 'Using'} repository:[/] [{ObsidianColors.PRIMARY_BRIGHT}]{repo_name}[/]")
-
     try:
+        # Validate and sanitize vault path
+        if vault_path is None:
+            vault_path = Path(typer.prompt("Enter local path of your Obsidian Vault"))
+
+        vault_path = validate_vault_path(vault_path)
+        vault_path.mkdir(parents=True, exist_ok=True)
+
+        token = get_token()
+        if not token:
+            token = typer.prompt("Enter your GitHub Personal Access Token", hide_input=True)
+            set_token(token)  # Validation happens inside set_token
+            console.print(f"[{ObsidianColors.SUCCESS}]✓[/] Token stored in ~/.obsidianite/.env")
+        else:
+            console.print(f"[{ObsidianColors.INFO}]ℹ[/] Using existing GitHub token")
+
+        # Validate repository name
+        if not repo_name:
+            default_repo = vault_path.name.replace(" ", "-")
+            repo_name = typer.prompt("Enter GitHub repository name", default=default_repo)
+
+        repo_name = validate_input_length(repo_name, MAX_REPO_NAME_LENGTH, "Repository name")
+        repo_name = validate_repo_name(repo_name)
+
+        console.print(f"[{ObsidianColors.INFO}]{'Checking' if use_existing else 'Using'} repository:[/] [{ObsidianColors.PRIMARY_BRIGHT}]{repo_name}[/]")
+
         full_name = get_or_create_private_repo(token, repo_name, create_if_missing=not use_existing)
         remote_url = build_remote_url(token, full_name)
         repo = init_repo(vault_path, remote_url)
@@ -86,9 +100,19 @@ def init(
             border_style=ObsidianColors.SUCCESS,
             box=box.ROUNDED
         ))
-    except Exception as e:
+    except ValueError as e:
+        # Validation errors - show directly (already sanitized)
         console.print(Panel(
-            f"[bold {ObsidianColors.ERROR}]Error:[/] {e}",
+            f"[bold {ObsidianColors.ERROR}]Validation Error:[/] {e}",
+            border_style=ObsidianColors.ERROR,
+            box=box.ROUNDED
+        ))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        # Sanitize other errors to prevent information disclosure
+        safe_message = sanitize_error_message(e, get_token())
+        console.print(Panel(
+            f"[bold {ObsidianColors.ERROR}]Error:[/] {safe_message}",
             border_style=ObsidianColors.ERROR,
             box=box.ROUNDED
         ))
@@ -101,7 +125,11 @@ def push(message: Optional[str] = typer.Option(None, "--message", "-m", help="Co
     mapping = get_repo_mapping()
     if not mapping.get("VAULT_PATH"):
         raise typer.Exit("Vault not configured. Run 'obsidianite init'.")
-    
+
+    # Validate commit message length if provided
+    if message:
+        message = validate_input_length(message, MAX_COMMIT_MESSAGE_LENGTH, "Commit message")
+
     try:
         repo = open_repo(Path(mapping["VAULT_PATH"]))
         
@@ -153,8 +181,9 @@ def push(message: Optional[str] = typer.Option(None, "--message", "-m", help="Co
             ))
 
     except Exception as e:
+        safe_message = sanitize_error_message(e, get_token())
         console.print(Panel(
-            f"[bold {ObsidianColors.ERROR}]Error:[/] {e}",
+            f"[bold {ObsidianColors.ERROR}]Error:[/] {safe_message}",
             border_style=ObsidianColors.ERROR,
             box=box.ROUNDED
         ))
@@ -208,8 +237,9 @@ def pull():
         ))
 
     except Exception as e:
+        safe_message = sanitize_error_message(e, get_token())
         console.print(Panel(
-            f"[bold {ObsidianColors.ERROR}]Error:[/] {e}",
+            f"[bold {ObsidianColors.ERROR}]Error:[/] {safe_message}",
             border_style=ObsidianColors.ERROR,
             box=box.ROUNDED
         ))
@@ -269,8 +299,9 @@ def update():
                 console.print(f"[{ObsidianColors.WARNING}]Update cancelled.[/]")
 
         except Exception as e:
+            safe_message = sanitize_error_message(e, get_token())
             console.print(Panel(
-                f"[bold {ObsidianColors.ERROR}]Error checking for updates:[/] {e}",
+                f"[bold {ObsidianColors.ERROR}]Error checking for updates:[/] {safe_message}",
                 border_style=ObsidianColors.ERROR,
                 box=box.ROUNDED
             ))
