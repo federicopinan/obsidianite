@@ -18,7 +18,8 @@ dependencies = [
   "PyGithub>=2.3.0",
   "python-dotenv>=1.0.1",
   "colorama>=0.4.6",
-  "rich>=13.7.1"
+  "rich>=13.7.1",
+  "customtkinter>=5.2.0"
 ]
 
 [project.urls]
@@ -26,6 +27,7 @@ Homepage = "https://github.com/"
 
 [project.scripts]
 obsidianite = "obsidianite.cli:app"
+obsidianite-gui = "obsidianite.gui:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
